@@ -1,10 +1,12 @@
 #include "math.cpp"
 #include <iostream>
 #include <string>
+#include <tuple>
 #include <vector>
 #include <cmath>
 
 template <typename T> using Matrix = std::vector<std::vector<T>>;
+
 class Module {
     public: 
         Matrix<float> forward(Matrix<float> input);
@@ -33,6 +35,7 @@ std::string printDimensions(const Matrix<float>& matrix) {
 std::string to_string(const std::pair<int, int>& p) {
     return "(" + std::to_string(p.first) + ", " + std::to_string(p.second) + ")";
 }
+
 class LinearReLU : public Module {
     public:
         Matrix<float> weights;
@@ -48,7 +51,7 @@ class LinearReLU : public Module {
             Matrix<float> z = add(dot(input, weights), bias);
             return applyFunction(z, ReLU);
         };
-        Matrix<float> backward(Matrix<float>& dA) {
+        std::tuple<Matrix<float>, Matrix<float>, Matrix<float>> backward(Matrix<float>& dA) {
             Matrix<float> z = dot(last_input, weights);
             z = applyFunction(z, dReLU);
             z = multiply(dA, z);
@@ -57,10 +60,10 @@ class LinearReLU : public Module {
             Matrix<float> dB = dZ;  // dB: (m x out_size)
             Matrix<float> dL = transpose(dot(weights, transpose(dZ)));  // dL: (m x in_size)
 
-            this->weights = subtract(weights, applyFunction(dW, [](float x) { return 0.001f * x; }));
-            this->bias = subtract(bias, applyFunction(dB, [](float x) { return 0.001f * x; }));
+            //this->weights = subtract(weights, applyFunction(dW, [](float x) { return 0.001f * x; }));
+            //this->bias = subtract(bias, applyFunction(dB, [](float x) { return 0.001f * x; }));
 
-            return dL;
+            return std::make_tuple(dL, dW, dB);
         }
 };
 
@@ -78,7 +81,7 @@ class LinearSoftmax : public Module {
             this->last_input = input;
             return softmax(add(dot(input, weights), bias));
         };
-        Matrix<float> backward(Matrix<float>& dA) {
+        std::tuple<Matrix<float>, Matrix<float>, Matrix<float>> backward(Matrix<float>& dA) {
    
             Matrix<float> dZ = dA;  // dZ: (m x out_size)
             Matrix<float> dW = dot(transpose(last_input), dZ);  // dW: (in_size x out_size)
@@ -86,11 +89,10 @@ class LinearSoftmax : public Module {
             Matrix<float> dL = transpose(dot(weights, transpose(dZ)));  // dL: (m x in_size)
 
             Matrix<float> oldWeights = weights;
-            this->weights = subtract(weights, applyFunction(dW, [](float x) { return 0.001f * x; }));
-            this->bias = subtract(bias, applyFunction(dB, [](float x) { return 0.001f * x; }));
+            //this->weights = subtract(weights, applyFunction(dW, [](float x) { return 0.001f * x; }));
+            //this->bias = subtract(bias, applyFunction(dB, [](float x) { return 0.001f * x; }));
 
-            return dL;
-    
+            return std::make_tuple(dL, dW, dB);
         };
 };
 
@@ -117,10 +119,21 @@ int main() {
         Matrix<float> output = l1.forward(possibleInputs[0]);
         Matrix<float> output2 = l2.forward(output);
         Matrix<float> loss = subtract(output2, possibleOutputs[0]);
-        Matrix<float> dZ =l2.backward(loss);
-        Matrix<float> dZ2 = l1.backward(dZ);
+        
+        Matrix<float> dA;
+        Matrix<float> dW;
+        Matrix<float> dB;
 
-        for (int i = 0; i < 4000; i++) {
+        std::tie(dA, dW, dB) = l2.backward(loss);
+        
+
+        //Matrix<float> dZ =l2.backward(loss);
+        std::tie(dA, dW, dB) = l1.backward(dA);
+        l1.weights = subtract(l1.weights, applyFunction(dW, [](float x) { return 0.001f * x; }));
+        l1.bias = subtract(l1.bias, applyFunction(dB, [](float x) { return 0.001f * x; }));
+        //Matrix<float> dZ2 = l1.backward(dZ);
+
+        for (int i = 0; i < 400000; i++) {
             std::cout << "Iteration: " << i << std::endl;
             for (int m = 0; m < 6; m++) {
                 int j = m;
@@ -133,8 +146,13 @@ int main() {
                 std::cout << "Loss: " << std::endl;
                 printMatrix(loss);
                 std::cout << "-------------" << std::endl;
-                dZ = l2.backward(loss);
-                dZ2 = l1.backward(dZ);
+                std::tie(dA, dW, dB) = l2.backward(loss);
+                l2.weights = subtract(l2.weights, applyFunction(dW, [](float x) { return 0.0001f * x; }));
+                l2.bias = subtract(l2.bias, applyFunction(dB, [](float x) { return 0.0001f * x; }));
+                std::tie(dA, dW, dB) = l1.backward(dA);
+
+                l1.weights = subtract(l1.weights, applyFunction(dW, [](float x) { return 0.0001f * x; }));
+                l1.bias = subtract(l1.bias, applyFunction(dB, [](float x) { return 0.0001f * x; }));
             }
 
             if (i % 1 == 0) {

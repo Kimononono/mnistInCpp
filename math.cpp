@@ -6,8 +6,8 @@
 #include <cmath>     
 #include <algorithm> 
 
-template <typename T> using Matrix = std::vector<std::vector<T>>;
-template <typename T> std::pair<size_t, size_t> shape(const Matrix<T>& a) {
+template <typename T> using MatrixData = std::vector<std::vector<T>>;
+template <typename T> std::pair<size_t, size_t> shape(const MatrixData<T>& a) {
     return { a.size(), a[0].size() }; 
 }
 float getRandomFloat() {
@@ -16,12 +16,12 @@ float getRandomFloat() {
     static std::uniform_real_distribution<float> dis(-1.0, 1.0); 
     return dis(gen);
 }
-template <typename T>
-Matrix<T> createMatrix(int rows, int cols) {
+
+template <typename T> MatrixData<T> createMatrix(int rows, int cols) {
     if (rows <= 0 || cols <= 0) {
         throw std::invalid_argument("Matrix dimensions must be positive");
     }
-    Matrix<T> result(rows, std::vector<T>(cols));
+    MatrixData<T> result(rows, std::vector<T>(cols));
     // Initialize matrix with some values (optional)
     for (int i = 0; i < rows; ++i) {
         for (int j = 0; j < cols; ++j) {
@@ -31,7 +31,7 @@ Matrix<T> createMatrix(int rows, int cols) {
     return result;
 }
 
-template <typename T> Matrix<T> dot(const Matrix<T>& a, const Matrix<T>& b) {
+template <typename T> MatrixData<T> dot(const MatrixData<T>& a, const MatrixData<T>& b) {
     if (a[0].size() != b.size()) {
         std::cout << "a[0].size() = " << a[0].size() << std::endl;
 
@@ -44,7 +44,7 @@ template <typename T> Matrix<T> dot(const Matrix<T>& a, const Matrix<T>& b) {
 
     int resultRows = a.size();
     int resultCols = b[0].size();
-    Matrix<T> result = createMatrix<T>(resultRows, resultCols);
+    MatrixData<T> result = createMatrix<T>(resultRows, resultCols);
 
     for (int i = 0; i < resultRows; ++i) {
         for (int j = 0; j < resultCols; ++j) {
@@ -58,10 +58,10 @@ template <typename T> Matrix<T> dot(const Matrix<T>& a, const Matrix<T>& b) {
     return result;
 }
 
-template <typename T> Matrix<T> add(const Matrix<T>& a, const Matrix<T>& b) {
+template <typename T> MatrixData<T> add(const MatrixData<T>& a, const MatrixData<T>& b) {
     if (shape(a) != shape(b) ) throw std::invalid_argument("Matrices must have same size");
     auto [ rows, cols ] = shape(a);
-    Matrix<T> result = createMatrix<T>(rows, cols);
+    MatrixData<T> result = createMatrix<T>(rows, cols);
     for( int i = 0; i < a.size() ; i++ ) {
         for( int j = 0; j < a.size() ; j++ ) {
             result[i][j] = a[i][j] + b[i][j];
@@ -71,12 +71,11 @@ template <typename T> Matrix<T> add(const Matrix<T>& a, const Matrix<T>& b) {
 }
 
 
-template <typename T>
-Matrix<T> subtract(const Matrix<T>& a, const Matrix<T>& b) {
+template <typename T> MatrixData<T> subtract(const MatrixData<T>& a, const MatrixData<T>& b) {
     if (shape(a) != shape(b)) throw std::invalid_argument("Matrices must have the same size");
     
     auto [rows, cols] = shape(a);
-    Matrix<T> result = createMatrix<T>(rows, cols);
+    MatrixData<T> result = createMatrix<T>(rows, cols);
     
     for (int i = 0; i < rows; ++i) {
         for (int j = 0; j < cols; ++j) {
@@ -87,10 +86,10 @@ Matrix<T> subtract(const Matrix<T>& a, const Matrix<T>& b) {
     return result;
 }
 
-template <typename T> Matrix<T> multiply(const Matrix<T>& a, const Matrix<T>& b) {
+template <typename T> MatrixData<T> multiply(const MatrixData<T>& a, const MatrixData<T>& b) {
     if (shape(a) != shape(b) ) throw std::invalid_argument("Matrices must have same size");
     auto [ rows, cols ] = shape(a);
-    Matrix<T> result = createMatrix<T>(rows, cols);
+    MatrixData<T> result = createMatrix<T>(rows, cols);
     for( int i = 0; i < a.size() ; i++ ) {
         for( int j = 0; j < a.size() ; j++ ) {
             result[i][j] = a[i][j] * b[i][j];
@@ -100,9 +99,9 @@ template <typename T> Matrix<T> multiply(const Matrix<T>& a, const Matrix<T>& b)
 }
 
 
-template <typename T> Matrix<T> transpose(const Matrix<T>& a) {
+template <typename T> MatrixData<T> transpose(const MatrixData<T>& a) {
     auto [ rows, cols ] = shape(a);
-    Matrix<T> result = createMatrix<T>(cols, rows);
+    MatrixData<T> result = createMatrix<T>(cols, rows);
     for(int i = 0; i < a.size(); i++) {
     for(int j = 0; j < a[0].size(); j++) {
         // check if out of bounds
@@ -115,9 +114,9 @@ template <typename T> Matrix<T> transpose(const Matrix<T>& a) {
     return result;
 }
 
-template <typename T, typename F> Matrix<T> applyFunction(const Matrix<T>& a, F func) {
+template <typename T, typename F> MatrixData<T> applyFunction(const MatrixData<T>& a, F func) {
     auto [ rows, cols ] = shape(a);
-    Matrix<T> result = createMatrix<T>(rows, cols);
+    MatrixData<T> result = createMatrix<T>(rows, cols);
     for(int i = 0; i < a.size(); i++) {
     for(int j = 0; j < a[0].size(); j++) {
         result[i][j] = func(a[i][j]);
@@ -134,8 +133,9 @@ float dReLU(float in) {
 float ReLU(float in) {
     return in > 0 ? in : 0.0f;
 };
-Matrix<float> softmax(const Matrix<float>& input) {
-    Matrix<float> output(input.size(), std::vector<float>(input[0].size()));
+
+MatrixData<float> softmax(const MatrixData<float>& input) {
+    MatrixData<float> output(input.size(), std::vector<float>(input[0].size()));
     
     for (size_t i = 0; i < input.size(); ++i) {
         float maxVal = *std::max_element(input[i].begin(), input[i].end());

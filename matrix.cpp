@@ -1,10 +1,16 @@
 #include "math.cpp"
+#include <any>
+#include <cstddef>
+#include <typeinfo>
 #include <utility>
 #include <vector>
-template <typename T> using MatrixData = std::vector<std::vector<T>>;
+
+template <typename T, size_t D>
+std::any createMatrix_() {
+    using MatrixData = std::vector<
 
 
-template <typename T>
+template <typename T, int dim>
 class Matrix {
     public: 
         int rows;
